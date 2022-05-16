@@ -10,11 +10,7 @@ const refs = {
   seconds: document.querySelector('[data-seconds]'),
 };
 
-
 refs.start.setAttribute('disabled', true);
-
-let intervalId = null;
-let selectedUserDate = [];
 
 const options = {
   enableTime: true,
@@ -22,61 +18,57 @@ const options = {
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-       selectedUserDate = selectedDates[0].getTime();
-      checkValidDate(selectedUserDate);
-      getTimeValues(selectedUserDate);
-},
+    const selectedUserDate = selectedDates[0].getTime();
+    if (selectedUserDate < Date.now()) {
+      alert('Please choose a date in the future');
+      refs.start.setAttribute('disabled', true);
+      return;
+    } else {
+      refs.start.removeAttribute('disabled');
+    }
+    refs.start.addEventListener('click', () => {
+      timerStart.start(selectedUserDate);
+    });
+  },
 };
-
 flatpickr(' #datetime-picker', options);
 
-function checkValidDate(){
-    if (selectedUserDate < options.defaultDate){
-        alert('Please choose a date in the future');
-        refs.start.setAttribute('disabled', true);
-        return;
-    } else{
-        refs.start.removeAttribute('disabled');
-    };
+const timerStart = {
+  intervalId: null,
+
+  start(startTime) {
+    this.intervalId = setInterval(() => {
+      const currentTime = new Date();
+      const resultTime = startTime - currentTime;
+      const time = convertMs(resultTime);
+
+      updateClockface(time);
+
+      if (resultTime <= 0) {
+        clearInterval(this.intervalId);
+      }
+    }, 1000);
+  },
 };
 
-function getTimeValues(){
-    const resultTime = selectedUserDate - options.defaultDate;
-    const time = convertMs(resultTime);
+function updateClockface({ days, hours, minutes, seconds }) {
+  refs.timer.textContent = `${days}:${hours}:${minutes}:${seconds}`;
+}
 
-    if(resultTime > 0){
-        updateClockface(time);
-    }
-    // console.log(time);
-};
-
-function updateClockface({ days, hours, minutes, seconds }){
-refs.timer.textContent = `${days}:${hours}:${minutes}:${seconds}`;
-};
-
-function pad(value){
-    return String(value).padStart(2, '0');
-};
+function pad(value) {
+  return String(value).padStart(2, '0');
+}
 
 function convertMs(ms) {
-  // Number of milliseconds per unit of time
   const second = 1000;
   const minute = second * 60;
   const hour = minute * 60;
   const day = hour * 24;
 
-  // Remaining days
   const days = pad(Math.floor(ms / day));
-  // Remaining hours
   const hours = pad(Math.floor((ms % day) / hour));
-  // Remaining minutes
   const minutes = pad(Math.floor(((ms % day) % hour) / minute));
-  // Remaining seconds
   const seconds = pad(Math.floor((((ms % day) % hour) % minute) / second));
 
   return { days, hours, minutes, seconds };
-};
-
-refs.start.addEventListener('click', () => {
-    intervalId = setInterval(getTimeValues(), 1000);
-});
+}
